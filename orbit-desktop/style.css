@@ -1,0 +1,139 @@
+:root {
+    color-scheme: dark;
+    font-family: "Segoe UI", sans-serif;
+    background: #101018;
+    color: #f4f4fa;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background:
+        radial-gradient(ellipse at 75% 0%, #30234c 0%, transparent 55%),
+        #101018;
+}
+
+main {
+    width: min(680px, 88vw);
+    padding: 48px 0;
+}
+
+.badge {
+    color: #bca2ff;
+    font-size: 11px;
+    letter-spacing: 3px;
+}
+
+h1 {
+    margin: 24px 0 16px;
+    font-size: clamp(42px, 7vw, 64px);
+    line-height: 1.08;
+    letter-spacing: -3px;
+}
+
+h1 span {
+    color: #ac91f5;
+}
+
+.subtitle {
+    color: #a1a1b6;
+    margin-bottom: 30px;
+}
+
+form {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #ffffff20;
+    border-radius: 18px;
+    background: #ffffff08;
+    box-shadow: 0 20px 60px #00000030;
+}
+
+form:focus-within {
+    border-color: #ac91f5;
+}
+
+input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+    font: inherit;
+    border: 0;
+    border-radius: 11px;
+    transition: background 150ms, transform 150ms;
+}
+
+button:hover {
+    transform: translateY(-1px);
+}
+
+button:focus-visible {
+    outline: 2px solid #d5c6ff;
+    outline-offset: 4px;
+}
+
+#run {
+    padding: 12px 22px;
+    background: #bca2ff;
+    color: #171122;
+    font-weight: 600;
+}
+
+.shortcuts {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+#notepad {
+    padding: 10px 16px;
+    background: #ffffff0c;
+    color: #ddd7ec;
+}
+
+.shortcuts span,
+#status {
+    color: #9999b0;
+    font-size: 13px;
+}
+
+#status {
+    margin-top: 28px;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+#setup-ai {
+    padding: 10px 16px;
+    background: #bca2ff18;
+    color: #cbb8ff;
+    border: 1px solid #bca2ff30;
+  }
