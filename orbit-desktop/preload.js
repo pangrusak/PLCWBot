@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld("orbit", {
     interpretCommand: (text) =>
         ipcRenderer.invoke("interpret-command", text),
 
+    getRecentApps: () => ipcRenderer.invoke("get-recent-apps"),
+
     setupAI: () => ipcRenderer.invoke("setup-ai"),
 
     onSetupProgress: (callback) => {

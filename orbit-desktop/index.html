@@ -3,35 +3,155 @@
 
 <head>
     <meta charset="UTF-8" />
+
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self';" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <title>Orbit</title>
+
     <link rel="stylesheet" href="style.css" />
     <script src="renderer.js" defer></script>
 </head>
 
 <body>
-    <main>
-        <div class="badge">LOCAL DESKTOP ASSISTANT</div>
+    <fieldset class="version-picker">
+        <legend class="sr-only">Choose interface version</legend>
 
-        <h1>Less clicking.<br /><span>More doing.</span></h1>
-        <p class="subtitle">Your apps, one command away.</p>
+        <input type="radio" name="ui-version" id="version-one" checked />
+        <label for="version-one">I. Editorial</label>
 
-        <form id="command-form">
-            <label class="sr-only" for="command">Enter a command</label>
-            <input id="command" placeholder="Try “open notepad”" autocomplete="off" maxlength="200" />
-            <button id="run" type="submit">Run ↗</button>
-        </form>
+        <input type="radio" name="ui-version" id="version-two" />
+        <label for="version-two">II. Workbench</label>
+    </fieldset>
 
-        <div class="shortcuts">
-            <button id="notepad" type="button">Notepad ↗</button>
-            <button id="setup-ai" type="button">Install local AI</button>
-        </div>
+    <div class="app-shell">
+        <header class="masthead">
+            <a class="wordmark" href="#command">Orbit<span>.</span></a>
+            <p class="masthead-description">A local desktop assistant</p>
+            <span class="edition">DESKTOP / 01</span>
+        </header>
 
-        <p id="status" role="status" aria-live="polite">
-            Ready when you are.
-        </p>
-    </main>
+        <aside class="sidebar" aria-label="Workspace information">
+            <p class="sidebar-label">YOUR WORKSPACE</p>
+
+            <div class="sidebar-title">
+                A little less<br />
+                between you<br />
+                and your work.
+            </div>
+
+            <div class="sidebar-bottom">
+                <span>01 — Applications</span>
+                <span>02 — Local intelligence</span>
+                <span>03 — Your desktop</span>
+            </div>
+        </aside>
+
+        <main>
+            <section class="intro" aria-labelledby="page-title">
+                <p class="eyebrow">
+                    <span class="editorial-copy">A clearer way to begin</span>
+                    <span class="workbench-copy">APPLICATION WORKSPACE</span>
+                </p>
+
+                <h1 id="page-title">
+                    <span class="editorial-copy">
+                        Your next move,<br />
+                        <em>without the search.</em>
+                    </span>
+
+                    <span class="workbench-copy">
+                        What shall<br />
+                        we <em>open?</em>
+                    </span>
+                </h1>
+
+                <p class="description">
+                    Name an application. Orbit will look for it on your desktop.
+                </p>
+            </section>
+
+            <section class="command-section" aria-label="Open an application">
+                <div class="section-heading">
+                    <label for="command">THE COMMAND LINE</label>
+                    <span>01</span>
+                </div>
+
+                <form id="command-form">
+                    <span class="command-marker" aria-hidden="true">/</span>
+
+                    <input id="command" type="text" placeholder="Open Minecraft" autocomplete="off" spellcheck="false"
+                        maxlength="200" aria-describedby="command-hint" />
+
+                    <button id="run" type="submit">Open</button>
+                </form>
+
+                <p id="command-hint" class="command-hint">
+                    Try “Open VS Code” or “Launch Spotify”.
+                </p>
+            </section>
+
+            <section class="recents" aria-labelledby="recents-heading">
+                <div class="tools-heading">
+                    <h2 id="recents-heading">Recently opened</h2>
+                    <span>LAST FIVE</span>
+                </div>
+
+                <ol id="recent-list"></ol>
+
+                <p id="recent-empty" class="recent-empty">
+                    Your recently opened apps will appear here.
+                </p>
+            </section>
+
+            <section class="tools" aria-label="Desktop actions">
+                <div class="tools-heading">
+                    <h2>Within reach</h2>
+                    <span>QUICK ACTIONS</span>
+                </div>
+
+                <div class="action-row">
+                    <div class="action-description">
+                        <span class="action-number">01</span>
+
+                        <div>
+                            <h3>A blank page</h3>
+                            <p>Open Notepad directly.</p>
+                        </div>
+                    </div>
+
+                    <button id="notepad" type="button">Open Notepad</button>
+                </div>
+
+                <div class="action-row">
+                    <div class="action-description">
+                        <span class="action-number">02</span>
+
+                        <div>
+                            <h3>Local intelligence</h3>
+                            <p>Install or check your AI setup.</p>
+                        </div>
+                    </div>
+
+                    <button id="setup-ai" type="button">Set up local AI</button>
+                </div>
+            </section>
+
+            <section class="activity" aria-label="Activity">
+                <span class="activity-label">ACTIVITY</span>
+
+                <p id="status" role="status" aria-live="polite">
+                    Ready when you are.
+                </p>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <span>ORBIT</span>
+            <span>Less navigation. More intention.</span>
+        </footer>
+    </div>
 </body>
 
 </html>

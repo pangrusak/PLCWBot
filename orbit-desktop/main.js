@@ -1,5 +1,10 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
-const { spawn } = require("node:child_process");
+const {
+    app,
+    BrowserWindow,
+    ipcMain,
+    dialog,
+    globalShortcut,
+} = require("electron"); const { spawn } = require("node:child_process");
 const path = require("node:path");
 
 let setupRunning = false;
@@ -7,169 +12,257 @@ let window;
 
 require("./app-launcher")(() => window);
 
+let quickMode = false;
+let normalBounds = null;
+let normalWasMaximized = false;
+
+function sendQuickMode() {
+    if (!window || window.isDestroyed()) return;
+
+    window.webContents.send("quick-mode", quickMode);
+}
+
+function showQuickLauncher() {
+    if (!window || window.isDestroyed()) return;
+
+    if (!quickMode) {
+        normalWasMaximized = window.isMaximized();
+
+        if (window.isMinimized()) {
+            window.restore();
+        }
+
+        if (normalWasMaximized) {
+            window.unmaximize();
+        }
+
+        normalBounds = window.getBounds();
+        quickMode = true;
+
+        window.setMinimumSize(420, 220);
+        window.setSize(680, 260);
+        window.center();
+    }
+
+    window.setAlwaysOnTop(true);
+    window.show();
+    window.focus();
+
+    if (window.webContents.isLoading()) {
+        window.webContents.once("did-finish-load", sendQuickMode);
+    } else {
+        sendQuickMode();
+    }
+}
+
+function restoreFullWindow() {
+    if (!window || window.isDestroyed()) return;
+
+    quickMode = false;
+    window.setAlwaysOnTop(false);
+
+    window.setMinimumSize(560, 420);
+
+    if (normalBounds) {
+        window.setBounds(normalBounds);
+    }
+
+    if (normalWasMaximized) {
+        window.maximize();
+    }
+
+    window.show();
+    window.focus();
+
+    sendQuickMode();
+}
+
+ipcMain.on("quick-launcher-action", (event, action) => {
+    if (
+        !window ||
+        window.isDestroyed() ||
+        event.sender !== window.webContents ||
+        event.senderFrame !== window.webContents.mainFrame
+    ) {
+        return;
+    }
+
+    if (action === "hide" && quickMode) {
+        window.hide();
+    }
+
+    if (action === "expand" && quickMode) {
+        restoreFullWindow();
+    }
+});
+
+app.on("will-quit", () => {
+    globalShortcut.unregisterAll();
+}); 
+
 function createWindow() {
-  window = new BrowserWindow({
-    width: 900,
-    height: 620,
-    minWidth: 560,
-    minHeight: 420,
-    backgroundColor: "#101018",
-    autoHideMenuBar: true,
-    title: "Orbit",
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
+    window = new BrowserWindow({
+        width: 900,
+        height: 620,
+        minWidth: 560,
+        minHeight: 420,
+        backgroundColor: "#101018",
+        autoHideMenuBar: true,
+        title: "Orbit",
+        webPreferences: {
+            preload: path.join(__dirname, "preload.js"),
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true,
+        },
+    });
 
-  window.webContents.setWindowOpenHandler(() => ({
-    action: "deny",
-  }));
+    window.webContents.setWindowOpenHandler(() => ({
+        action: "deny",
+    }));
 
-  window.webContents.on("will-navigate", (event) => {
-    event.preventDefault();
-  });
+    window.webContents.on("will-navigate", (event) => {
+        event.preventDefault();
+    });
 
-  window.loadFile("index.html");
+    window.loadFile("index.html");
 }
 
 ipcMain.handle("setup-ai", async (event) => {
-  if (
-    !window ||
-    window.isDestroyed() ||
-    event.sender !== window.webContents ||
-    event.senderFrame !== window.webContents.mainFrame
-  ) {
-    return { ok: false, message: "Request rejected." };
-  }
-
-  if (setupRunning) {
-    return { ok: false, message: "Setup is already running." };
-  }
-
-  setupRunning = true;
-
-  const sendProgress = (message) => {
-    if (window && !window.isDestroyed()) {
-      window.webContents.send("setup-progress", message);
-    }
-  };
-
-  try {
-    const { response } = await dialog.showMessageBox(window, {
-      type: "question",
-      title: "Set up local AI",
-      message: "Install Ollama and download Qwen 2.5 1.5B?",
-      detail:
-        "This downloads software from Ollama and a model of about 1 GB. " +
-        "Additional disk space is required for Ollama. " +
-        "Ollama can remain running in the background. " +
-        "Keep Orbit open until setup finishes.",
-      buttons: ["Cancel", "Install local AI"],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true,
-    });
-
-    if (response !== 1) {
-      return { ok: false, message: "Setup cancelled." };
+    if (
+        !window ||
+        window.isDestroyed() ||
+        event.sender !== window.webContents ||
+        event.senderFrame !== window.webContents.mainFrame
+    ) {
+        return { ok: false, message: "Request rejected." };
     }
 
-    const scriptPath = app.isPackaged
-      ? path.join(process.resourcesPath, "setup-ai.ps1")
-      : path.join(__dirname, "setup-ai.ps1");
+    if (setupRunning) {
+        return { ok: false, message: "Setup is already running." };
+    }
 
-    const powershell = path.join(
-      process.env.SystemRoot || "C:\\Windows",
-      "System32",
-      "WindowsPowerShell",
-      "v1.0",
-      "powershell.exe"
-    );
+    setupRunning = true;
 
-    return await new Promise((resolve) => {
-      const child = spawn(
-        powershell,
-        [
-          "-NoProfile",
-          "-NonInteractive",
-          "-ExecutionPolicy",
-          "Bypass",
-          "-File",
-          scriptPath,
-        ],
-        {
-          shell: false,
-          windowsHide: true,
-          stdio: ["ignore", "pipe", "pipe"],
+    const sendProgress = (message) => {
+        if (window && !window.isDestroyed()) {
+            window.webContents.send("setup-progress", message);
         }
-      );
+    };
 
-      let pending = "";
-      let errorText = "";
-
-      child.stdout.setEncoding("utf8");
-      child.stderr.setEncoding("utf8");
-
-      child.stdout.on("data", (chunk) => {
-        pending += chunk;
-
-        const lines = pending.split(/\r?\n/);
-        pending = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.trim()) {
-            sendProgress(line.trim());
-          }
-        }
-      });
-
-      child.stderr.on("data", (chunk) => {
-        errorText = (errorText + chunk).slice(-4000);
-      });
-
-      child.once("error", (error) => {
-        resolve({
-          ok: false,
-          message: `Couldn't start setup: ${error.message}`,
+    try {
+        const { response } = await dialog.showMessageBox(window, {
+            type: "question",
+            title: "Set up local AI",
+            message: "Install Ollama and download Qwen 2.5 1.5B?",
+            detail:
+                "This downloads software from Ollama and a model of about 1 GB. " +
+                "Additional disk space is required for Ollama. " +
+                "Ollama can remain running in the background. " +
+                "Keep Orbit open until setup finishes.",
+            buttons: ["Cancel", "Install local AI"],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
         });
-      });
 
-      child.once("close", (code) => {
-        if (pending.trim()) {
-          sendProgress(pending.trim());
+        if (response !== 1) {
+            return { ok: false, message: "Setup cancelled." };
         }
 
-        resolve({
-          ok: code === 0,
-          message:
-            code === 0
-              ? "Local AI is ready."
-              : errorText.trim() || `Setup failed with code ${code}.`,
+        const scriptPath = app.isPackaged
+            ? path.join(process.resourcesPath, "setup-ai.ps1")
+            : path.join(__dirname, "setup-ai.ps1");
+
+        const powershell = path.join(
+            process.env.SystemRoot || "C:\\Windows",
+            "System32",
+            "WindowsPowerShell",
+            "v1.0",
+            "powershell.exe"
+        );
+
+        return await new Promise((resolve) => {
+            const child = spawn(
+                powershell,
+                [
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    scriptPath,
+                ],
+                {
+                    shell: false,
+                    windowsHide: true,
+                    stdio: ["ignore", "pipe", "pipe"],
+                }
+            );
+
+            let pending = "";
+            let errorText = "";
+
+            child.stdout.setEncoding("utf8");
+            child.stderr.setEncoding("utf8");
+
+            child.stdout.on("data", (chunk) => {
+                pending += chunk;
+
+                const lines = pending.split(/\r?\n/);
+                pending = lines.pop() || "";
+
+                for (const line of lines) {
+                    if (line.trim()) {
+                        sendProgress(line.trim());
+                    }
+                }
+            });
+
+            child.stderr.on("data", (chunk) => {
+                errorText = (errorText + chunk).slice(-4000);
+            });
+
+            child.once("error", (error) => {
+                resolve({
+                    ok: false,
+                    message: `Couldn't start setup: ${error.message}`,
+                });
+            });
+
+            child.once("close", (code) => {
+                if (pending.trim()) {
+                    sendProgress(pending.trim());
+                }
+
+                resolve({
+                    ok: code === 0,
+                    message:
+                        code === 0
+                            ? "Local AI is ready."
+                            : errorText.trim() || `Setup failed with code ${code}.`,
+                });
+            });
         });
-      });
-    });
-  } catch (error) {
-    return { ok: false, message: error.message };
-  } finally {
-    setupRunning = false;
-  }
+    } catch (error) {
+        return { ok: false, message: error.message };
+    } finally {
+        setupRunning = false;
+    }
 });
 
 app.whenReady().then(() => {
-  createWindow();
+    createWindow();
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
+    app.on("activate", () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+            createWindow();
+        }
+    });
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+    if (process.platform !== "darwin") {
+        app.quit();
+    }
 });

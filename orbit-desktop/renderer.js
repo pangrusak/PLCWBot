@@ -27,6 +27,7 @@ async function runTask(task) {
         status.textContent =
             "Something went wrong with the desktop connection.";
     } finally {
+        await refreshRecentApps();
         setBusy(false);
         input.focus();
     }
@@ -77,3 +78,52 @@ setupButton.addEventListener("click", () => {
 });
 
 input.focus();
+
+const recentList = document.querySelector("#recent-list");
+const recentEmpty = document.querySelector("#recent-empty");
+
+async function refreshRecentApps() {
+    try {
+        const apps = await window.orbit.getRecentApps();
+
+        recentList.replaceChildren();
+        recentEmpty.hidden = apps.length > 0;
+
+        apps.forEach((app, index) => {
+            const item = document.createElement("li");
+            const number = document.createElement("span");
+            const name = document.createElement("span");
+            const button = document.createElement("button");
+
+            number.className = "recent-number";
+            number.textContent = String(index + 1).padStart(2, "0");
+
+            name.className = "recent-name";
+            name.textContent = app.Name;
+
+            button.type = "button";
+            button.textContent = "Open again";
+            button.setAttribute("aria-label", `Open ${app.Name} again`);
+
+            button.addEventListener("click", () => {
+                runTask(async () => {
+                    status.textContent = `Looking for ${app.Name}…`;
+
+                    // Uses the existing catalog checks and launch protections.
+                    const result = await window.orbit.interpretCommand(
+                        `Open ${app.Name}`
+                    );
+
+                    status.textContent = result.message;
+                });
+            });
+
+            item.append(number, name, button);
+            recentList.append(item);
+        });
+    } catch (error) {
+        console.warn("Couldn't load recent apps:", error);
+    }
+}
+
+refreshRecentApps();

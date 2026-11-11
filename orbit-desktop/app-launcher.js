@@ -207,6 +207,82 @@ module.exports = function registerAppLauncher(getWindow) {
         );
     }
 
+    function recentFilePath() {
+        return path.join(
+            app.getPath("userData"),
+            "orbit-data",
+            "recent-apps.json"
+        );
+    }
+
+    async function readRecentApps() {
+        try {
+            const saved = JSON.parse(
+                await fs.readFile(recentFilePath(), "utf8")
+            );
+
+            if (!Array.isArray(saved)) return [];
+
+            const seen = new Set();
+
+            return saved
+                .filter((entry) => {
+                    if (
+                        !entry ||
+                        typeof entry.Name !== "string" ||
+                        typeof entry.AppID !== "string" ||
+                        !entry.Name ||
+                        !entry.AppID ||
+                        seen.has(entry.AppID)
+                    ) {
+                        return false;
+                    }
+
+                    seen.add(entry.AppID);
+                    return true;
+                })
+                .slice(0, 5)
+                .map(({ Name, AppID }) => ({ Name, AppID }));
+        } catch {
+            return [];
+        }
+    }
+
+    async function rememberRecentApp(entry) {
+        const previous = await readRecentApps();
+
+        const updated = [
+            {
+                Name: entry.Name,
+                AppID: entry.AppID,
+            },
+            ...previous.filter((item) => item.AppID !== entry.AppID),
+        ].slice(0, 5);
+
+        const file = recentFilePath();
+
+        await fs.mkdir(path.dirname(file), { recursive: true });
+
+        const temporaryFile = `${file}.tmp`;
+
+        await fs.writeFile(
+            temporaryFile,
+            JSON.stringify(updated),
+            "utf8"
+        );
+
+        await fs.rename(temporaryFile, file);
+    }
+
+    ipcMain.handle("get-recent-apps", async (event) => {
+        if (!trusted(event)) return [];
+
+        const recent = await readRecentApps();
+
+        // The interface only needs display names.
+        return recent.map(({ Name }) => ({ Name }));
+    });
+
     async function launchEntry(entry) {
         await runPowerShell(
             `
@@ -228,6 +304,12 @@ module.exports = function registerAppLauncher(getWindow) {
       `,
             { ORBIT_APP_ID: entry.AppID }
         );
+
+        try {
+            await rememberRecentApp(entry);
+        } catch (error) {
+            console.warn("Couldn't save recent apps:", error.message);
+        }
 
         return {
             ok: true,
