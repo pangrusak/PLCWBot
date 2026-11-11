@@ -767,3 +767,95 @@ body:has(#version-two:checked) #run:hover {
         font-size: 16px;
     }
 }
+
+/* Global-shortcut popup */
+
+.quick-header {
+    display: none;
+}
+
+body.quick-mode {
+    min-width: 0;
+    background: #101722;
+}
+
+body.quick-mode .version-picker,
+body.quick-mode .masthead,
+body.quick-mode .sidebar,
+body.quick-mode .intro,
+body.quick-mode .tools,
+body.quick-mode .recents,
+body.quick-mode .footer,
+body.quick-mode .command-hint,
+body.quick-mode .section-heading {
+    display: none;
+}
+
+body.quick-mode .app-shell {
+    display: block;
+    width: 100%;
+    max-width: none;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    background: #101722;
+}
+
+body.quick-mode main {
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 16px 26px;
+}
+
+body.quick-mode .quick-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 14px;
+}
+
+.quick-wordmark {
+    color: var(--gold);
+    font-size: 25px;
+    letter-spacing: -1px;
+}
+
+.quick-controls {
+    display: flex;
+    gap: 20px;
+}
+
+.quick-controls button {
+    padding: 3px 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.quick-controls button:hover {
+    color: var(--gold);
+}
+
+body.quick-mode #command-form {
+    padding: 10px 0;
+}
+
+body.quick-mode #command {
+    font-size: 26px;
+}
+
+body.quick-mode .activity {
+    display: grid;
+    grid-template-columns: 65px minmax(0, 1fr);
+    gap: 12px;
+    padding: 15px 0 0;
+}
+
+body.quick-mode #status {
+    font-size: 13px;
+}

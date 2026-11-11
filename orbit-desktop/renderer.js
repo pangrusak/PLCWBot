@@ -127,3 +127,34 @@ async function refreshRecentApps() {
 }
 
 refreshRecentApps();
+
+let quickLauncherVisible = false;
+
+window.orbit.onQuickMode((enabled) => {
+    quickLauncherVisible = enabled;
+    document.body.classList.toggle("quick-mode", enabled);
+
+    if (enabled) {
+        requestAnimationFrame(() => {
+            if (!input.disabled) {
+                input.focus();
+                input.select();
+            }
+        });
+    }
+});
+
+document.querySelector("#quick-expand").addEventListener("click", () => {
+    window.orbit.quickLauncherAction("expand");
+});
+
+document.querySelector("#quick-hide").addEventListener("click", () => {
+    window.orbit.quickLauncherAction("hide");
+});
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && quickLauncherVisible) {
+        event.preventDefault();
+        window.orbit.quickLauncherAction("hide");
+    }
+});

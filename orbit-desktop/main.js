@@ -98,7 +98,7 @@ ipcMain.on("quick-launcher-action", (event, action) => {
 
 app.on("will-quit", () => {
     globalShortcut.unregisterAll();
-}); 
+});
 
 function createWindow() {
     window = new BrowserWindow({
@@ -253,6 +253,26 @@ ipcMain.handle("setup-ai", async (event) => {
 
 app.whenReady().then(() => {
     createWindow();
+
+    const preferred = globalShortcut.register(
+        "Super+O",
+        showQuickLauncher
+    );
+
+    if (preferred) {
+        console.log("Quick launcher: Win+O");
+    } else {
+        const fallback = globalShortcut.register(
+            "Control+Alt+O",
+            showQuickLauncher
+        );
+
+        console.log(
+            fallback
+                ? "Win+O unavailable. Quick launcher: Ctrl+Alt+O"
+                : "Couldn't register a quick-launch shortcut."
+        );
+    }
 
     app.on("activate", () => {
         if (BrowserWindow.getAllWindows().length === 0) {
