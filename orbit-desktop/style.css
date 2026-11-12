@@ -44,8 +44,7 @@ fieldset {
 
 button:focus-visible,
 a:focus-visible,
-input:focus-visible,
-.version-picker input:focus-visible+label {
+input:focus-visible {
     outline: 2px solid var(--gold);
     outline-offset: 5px;
 }
@@ -70,45 +69,7 @@ button:disabled:hover {
     border: 0;
 }
 
-/* Shared version selector */
-
-.version-picker {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 24px;
-    margin: 0;
-    padding: 14px 20px;
-    border: 0;
-    border-bottom: 1px solid var(--line);
-    background: var(--paper);
-    color: var(--blue);
-}
-
-.version-picker input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-}
-
-.version-picker label {
-    padding: 4px 0;
-    border-bottom: 1px solid transparent;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.version-picker input:checked+label {
-    border-bottom-color: var(--gold);
-    color: var(--blue);
-}
-
-.version-picker input:not(:checked)+label {
-    color: var(--muted);
-}
-
-/* Version I: Editorial */
+/* Editorial Layout */
 
 .app-shell {
     max-width: 1160px;
@@ -171,11 +132,6 @@ button:disabled:hover {
     margin-left: auto;
     font-size: 10px;
     letter-spacing: 2px;
-}
-
-.sidebar,
-.workbench-copy {
-    display: none;
 }
 
 main {
@@ -391,162 +347,6 @@ h1 em {
     letter-spacing: 3px;
 }
 
-/* Version II: Workbench */
-
-body:has(#version-two:checked) {
-    background: var(--blue);
-}
-
-body:has(#version-two:checked) .app-shell {
-    display: grid;
-    grid-template-columns: 235px minmax(0, 1fr);
-    grid-template-rows: auto 1fr auto;
-    max-width: none;
-    min-height: calc(100vh - 54px);
-    padding: 0;
-    background: var(--paper);
-}
-
-body:has(#version-two:checked) .masthead {
-    grid-column: 1;
-    grid-row: 1;
-    display: block;
-    padding: 32px 28px;
-    border: 0;
-    background: var(--blue);
-}
-
-body:has(#version-two:checked) .wordmark {
-    color: var(--gold);
-    font-size: 48px;
-}
-
-body:has(#version-two:checked) .wordmark .brand-logo {
-    width: 44px;
-    height: 44px;
-}
-
-body:has(#version-two:checked) .masthead-description {
-    margin-top: 15px;
-    color: #d9e0e9;
-    font-size: 13px;
-}
-
-body:has(#version-two:checked) .edition {
-    display: none;
-}
-
-body:has(#version-two:checked) .sidebar {
-    grid-column: 1;
-    grid-row: 2 / 4;
-    display: flex;
-    flex-direction: column;
-    padding: 12px 28px 28px;
-    background: var(--blue);
-    color: var(--paper);
-}
-
-.sidebar-label {
-    margin: 0 0 23px;
-    padding-top: 22px;
-    border-top: 1px solid #78869b;
-    color: var(--gold);
-    font-size: 10px;
-    letter-spacing: 2px;
-}
-
-.sidebar-title {
-    font-size: 28px;
-    font-style: italic;
-    line-height: 1.25;
-}
-
-.sidebar-bottom {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-top: auto;
-    padding-top: 64px;
-    color: #d9e0e9;
-    font-size: 12px;
-}
-
-body:has(#version-two:checked) main {
-    grid-column: 2;
-    grid-row: 1 / 3;
-    width: 100%;
-    max-width: 900px;
-    margin: 0;
-    padding: 40px 42px 0;
-}
-
-body:has(#version-two:checked) .editorial-copy {
-    display: none;
-}
-
-body:has(#version-two:checked) .workbench-copy {
-    display: inline;
-}
-
-body:has(#version-two:checked) .intro {
-    padding: 0 0 35px;
-    text-align: left;
-}
-
-body:has(#version-two:checked) .eyebrow {
-    padding-bottom: 18px;
-    border-bottom: 1px solid var(--line);
-    font-size: 10px;
-    letter-spacing: 2px;
-}
-
-body:has(#version-two:checked) h1 {
-    margin-top: 28px;
-    font-size: clamp(48px, 7vw, 86px);
-    line-height: 0.98;
-    letter-spacing: -3px;
-}
-
-body:has(#version-two:checked) .description {
-    max-width: 330px;
-}
-
-body:has(#version-two:checked) #command-form {
-    gap: 12px;
-    padding: 15px 0;
-}
-
-body:has(#version-two:checked) #command {
-    font-size: 23px;
-}
-
-body:has(#version-two:checked) #run {
-    padding: 10px 18px;
-    border: 1px solid var(--blue);
-    background: var(--blue);
-    color: var(--paper);
-    font-size: 16px;
-}
-
-body:has(#version-two:checked) #run:hover {
-    color: var(--gold);
-}
-
-body:has(#version-two:checked) .tools {
-    margin-top: 32px;
-}
-
-body:has(#version-two:checked) .tools-heading h2 {
-    font-style: italic;
-}
-
-body:has(#version-two:checked) .footer {
-    grid-column: 2;
-    grid-row: 3;
-    margin: 0 42px;
-    border-top-color: var(--line);
-}
-
 /* Narrow windows */
 
 @media (max-width: 700px) {
@@ -577,79 +377,16 @@ body:has(#version-two:checked) .footer {
     .action-description p {
         max-width: 180px;
     }
-
-    body:has(#version-two:checked) .app-shell {
-        grid-template-columns: 155px minmax(0, 1fr);
-    }
-
-    body:has(#version-two:checked) .masthead {
-        padding: 27px 20px;
-    }
-
-    body:has(#version-two:checked) .sidebar {
-        padding: 8px 20px 24px;
-    }
-
-    .sidebar-title {
-        font-size: 22px;
-    }
-
-    body:has(#version-two:checked) main {
-        padding: 30px 24px 0;
-    }
-
-    body:has(#version-two:checked) .footer {
-        margin: 0 24px;
-    }
-
-    body:has(#version-two:checked) .action-row {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    body:has(#version-two:checked) .tools-heading>span {
-        display: none;
-    }
-
-    body:has(#version-two:checked) .activity {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
 }
 
 @media (max-width: 460px) {
-    body:has(#version-two:checked) .app-shell {
-        grid-template-columns: 1fr;
-    }
-
-    body:has(#version-two:checked) .masthead {
-        grid-column: 1;
-        grid-row: 1;
-        padding: 20px 24px;
-    }
-
-    body:has(#version-two:checked) .sidebar {
-        display: none;
-    }
-
-    body:has(#version-two:checked) main {
-        grid-column: 1;
-        grid-row: 2;
-    }
-
-    body:has(#version-two:checked) .footer {
-        grid-column: 1;
-        grid-row: 3;
-    }
-
     .footer>span:last-child {
         max-width: 160px;
         text-align: right;
     }
 }
 
-/* Dark mode — applies to both interface versions */
+/* Dark mode */
 
 :root {
     --blue: #a9c9f5;
@@ -665,10 +402,6 @@ body:has(#version-two:checked) .footer {
 
 body {
     background: var(--paper);
-}
-
-.version-picker {
-    background: #0c121b;
 }
 
 #command::placeholder {
@@ -688,46 +421,7 @@ body {
     color: #fff4da;
 }
 
-/* Workbench: dark navy rail, slightly lighter workspace */
-
-body:has(#version-two:checked) {
-    background: #0a1019;
-}
-
-body:has(#version-two:checked) .app-shell {
-    background: var(--paper);
-}
-
-body:has(#version-two:checked) .masthead,
-body:has(#version-two:checked) .sidebar {
-    background: #0a1019;
-}
-
-body:has(#version-two:checked) .masthead-description,
-body:has(#version-two:checked) .sidebar-bottom {
-    color: var(--muted);
-}
-
-body:has(#version-two:checked) .sidebar {
-    color: #c5d5eb;
-}
-
-body:has(#version-two:checked) .sidebar-label {
-    border-top-color: var(--line);
-}
-
-body:has(#version-two:checked) #run {
-    background: transparent;
-    border-color: var(--gold);
-    color: var(--gold);
-}
-
-body:has(#version-two:checked) #run:hover {
-    background: #192638;
-    color: #ecd49c;
-}
-
-/* Recent apps — shared by both interface versions */
+/* Recent apps */
 
 .recents {
     margin-top: 34px;
@@ -808,9 +502,7 @@ body.quick-mode {
     background: #101722;
 }
 
-body.quick-mode .version-picker,
 body.quick-mode .masthead,
-body.quick-mode .sidebar,
 body.quick-mode .intro,
 body.quick-mode .tools,
 body.quick-mode .recents,
