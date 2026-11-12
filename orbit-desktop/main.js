@@ -115,6 +115,7 @@ function createWindow() {
             nodeIntegration: false,
             sandbox: true,
         },
+        show: !process.argv.includes("--background"),
     });
 
     window.webContents.setWindowOpenHandler(() => ({
@@ -254,25 +255,6 @@ ipcMain.handle("setup-ai", async (event) => {
 app.whenReady().then(() => {
     createWindow();
 
-    const preferred = globalShortcut.register(
-        "Super+O",
-        showQuickLauncher
-    );
-
-    if (preferred) {
-        console.log("Quick launcher: Win+O");
-    } else {
-        const fallback = globalShortcut.register(
-            "Control+Alt+O",
-            showQuickLauncher
-        );
-
-        console.log(
-            fallback
-                ? "Win+O unavailable. Quick launcher: Ctrl+Alt+O"
-                : "Couldn't register a quick-launch shortcut."
-        );
-    }
 
     app.on("activate", () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -282,7 +264,11 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
-        app.quit();
-    }
+    // Orbit remains running until explicitly quit.
+});
+
+require("./desktop-controls")({
+    getWindow: () => window,
+    showQuickLauncher,
+    restoreFullWindow,
 });

@@ -1,0 +1,40 @@
+appId: com.srihaas.orbit
+productName: Orbit
+
+directories:
+  output: release
+
+asar: true
+
+fileOptions:
+  files:
+    - main.js
+    - preload.js
+    - renderer.js
+    - app-launcher.js
+    - desktop-controls.js
+    - index.html
+    - style.css
+    - package.json
+
+  extraResources:
+    - from: setup-ai.ps1
+      to: setup-ai.ps1
+
+    - from: voice-command.ps1
+      to: voice-command.ps1
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Orbit
+  runAfterFinish: true

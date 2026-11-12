@@ -1,0 +1,9 @@
+{
+    "appName": "PLCWBot",
+    "tagline": "Your desktop, one command away.",
+    "colors": {
+        "background": "#101722",
+        "blue": "#A9C9F5",
+        "gold": "#D5B66E"
+    }
+}

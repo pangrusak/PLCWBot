@@ -158,3 +158,19 @@ document.addEventListener("keydown", (event) => {
         window.orbit.quickLauncherAction("hide");
     }
 });
+
+window.orbit.onVoiceUpdate((data) => {
+    if (data.state === "result") {
+        if (busy) {
+            status.textContent =
+                "Orbit is busy. Finish the current command, then try voice again.";
+            return;
+        }
+
+        input.value = data.text;
+        input.focus();
+        input.select();
+    }
+
+    status.textContent = data.message;
+});

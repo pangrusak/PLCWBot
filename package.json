@@ -1,0 +1,12 @@
+{
+  "devDependencies": {
+    "electron-builder": "^26.18.0"
+  },
+  "scripts": {
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "productName": "Orbit",
+  "allowScripts": {
+    "electron-winstaller@5.4.0": true
+  }
+}

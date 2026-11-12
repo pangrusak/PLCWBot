@@ -2,6 +2,16 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("orbit", {
 
+    onVoiceUpdate: (callback) => {
+        const listener = (_event, data) => callback(data);
+
+        ipcRenderer.on("voice-update", listener);
+
+        return () => {
+            ipcRenderer.removeListener("voice-update", listener);
+        };
+    },
+
     quickLauncherAction: (action) => {
         if (action === "hide" || action === "expand") {
             ipcRenderer.send("quick-launcher-action", action);
