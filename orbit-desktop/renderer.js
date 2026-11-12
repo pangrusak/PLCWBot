@@ -185,18 +185,58 @@ document.addEventListener("keydown", (event) => {
 });
 
 window.orbit.onVoiceUpdate((data) => {
+    const appName = window.orbit?.appName || "PLCWBot";
+
     if (data.state === "result") {
         if (busy) {
-            const name = window.orbit?.appName || "PLCWBot";
             status.textContent =
-                `${name} is busy. Finish the current command, then try voice again.`;
+                `${appName} is busy. Finish the current command, then try voice again.`;
             return;
         }
 
         input.value = data.text;
         input.focus();
         input.select();
+        status.textContent = data.message;
+        return;
     }
 
+    if (data.state === "auto_run") {
+        // High-confidence result — submit immediately without user confirmation
+        if (busy) {
+            // Fallback: put it in the box so the user can run it manually
+            input.value = data.text;
+            status.textContent =
+                `${appName} is busy. Your command is queued — press Enter when ready.`;
+            return;
+        }
+
+        input.value = data.text;
+        status.textContent = data.message;
+
+        // Trigger the form submit programmatically
+        requestAnimationFrame(() => form.dispatchEvent(
+            new Event("submit", { bubbles: true, cancelable: true })
+        ));
+        return;
+    }
+
+    if (data.state === "retry_available") {
+        // Show the error plus a "Try again" note in the status bar
+        status.textContent =
+            (data.message || "Voice input failed.") +
+            "  Press Ctrl+Shift+U to try again.";
+
+        // If we got a low-confidence text, still put it in the input
+        // so the user can manually correct and press Enter.
+        if (data.text) {
+            input.value = data.text;
+            input.focus();
+            input.select();
+        }
+        return;
+    }
+
+    // All other states (starting, listening, error) — just show the message
     status.textContent = data.message;
 });

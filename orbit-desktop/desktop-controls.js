@@ -122,6 +122,10 @@ module.exports = function registerDesktopControls({
         );
     }
 
+    // Auto-submit confidence threshold: results at or above this are run
+    // immediately without requiring the user to press Enter.
+    const AUTO_RUN_CONFIDENCE = 0.82;
+
     async function startVoice() {
         if (voiceStarting || voiceProcess) return;
 
@@ -196,10 +200,11 @@ module.exports = function registerDesktopControls({
             let notifiedListening = false;
             let timedOut = false;
 
+            // 35 s hard outer timeout — the PS script has its own inner limit
             const timeout = setTimeout(() => {
                 timedOut = true;
                 child.kill();
-            }, 30000);
+            }, 35000);
 
             child.stdout.setEncoding("utf8");
             child.stderr.setEncoding("utf8");
@@ -207,29 +212,30 @@ module.exports = function registerDesktopControls({
             child.stdout.on("data", (chunk) => {
                 output = (output + chunk).slice(-16000);
 
-                if (
-                    !notifiedListening &&
-                    output.includes("ORBIT_LISTENING")
-                ) {
+                if (!notifiedListening && output.includes("ORBIT_LISTENING")) {
                     notifiedListening = true;
 
                     sendVoice({
                         state: "listening",
-                        message: "Listening… say an app-opening command.",
+                        message: "Listening… speak your command.",
                     });
                 }
             });
 
             child.stderr.on("data", (chunk) => {
-                errorOutput = (errorOutput + chunk).slice(-4000);
+                // Filter out the "trying WinRT fallback" notice — it's normal
+                const line = chunk.toString();
+                if (!line.includes("trying WinRT fallback")) {
+                    errorOutput = (errorOutput + line).slice(-4000);
+                }
             });
 
-            child.once("error", (error) => {
+            child.once("error", (err) => {
                 clearTimeout(timeout);
 
                 sendVoice({
                     state: "error",
-                    message: `Couldn't start voice input: ${error.message}`,
+                    message: `Couldn't start voice input: ${err.message}`,
                 });
             });
 
@@ -239,23 +245,40 @@ module.exports = function registerDesktopControls({
 
                 if (quitting) return;
 
+                // ---- Process failed ----------------------------------------
                 if (code !== 0) {
+                    // Surface only the most useful error line to the user
+                    const errLines = errorOutput
+                        .split(/\r?\n/)
+                        .map((l) => l.trim())
+                        .filter(
+                            (l) =>
+                                l &&
+                                !l.startsWith("SAPI:") &&
+                                !l.startsWith("WinRT:") &&
+                                !l.includes("trying WinRT")
+                        );
+
+                    const errMsg = timedOut
+                        ? "Voice input timed out. Try speaking sooner after the prompt."
+                        : errLines[0] || "Voice input failed.";
+
                     sendVoice({
-                        state: "error",
-                        message: timedOut
-                            ? "Voice input timed out. Try again."
-                            : errorOutput.trim() || "Voice input failed.",
+                        state: "retry_available",
+                        message: errMsg,
                     });
 
                     return;
                 }
 
+                // ---- Process succeeded — parse JSON result ------------------
                 try {
                     const lines = output
                         .split(/\r?\n/)
-                        .map((line) => line.trim())
+                        .map((l) => l.trim())
                         .filter(Boolean);
 
+                    // The last non-empty line is the JSON payload
                     const result = JSON.parse(lines[lines.length - 1]);
 
                     if (
@@ -266,15 +289,47 @@ module.exports = function registerDesktopControls({
                         throw new Error("Invalid transcript.");
                     }
 
+                    const text = result.text.trim();
+                    const conf = typeof result.confidence === "number"
+                        ? result.confidence
+                        : 0;
+                    const pct  = Math.round(conf * 100);
+
+                    // Low-confidence flag set by the PowerShell script
+                    if (result.low_confidence) {
+                        sendVoice({
+                            state: "retry_available",
+                            text,
+                            message:
+                                `Heard: "${text}" — confidence too low (${pct}%). ` +
+                                "Speak clearly and try again, or type your command.",
+                        });
+                        return;
+                    }
+
+                    // High confidence — auto-run without requiring Enter
+                    if (conf >= AUTO_RUN_CONFIDENCE) {
+                        sendVoice({
+                            state: "auto_run",
+                            text,
+                            message: `Heard: "${text}" — running…`,
+                        });
+                        return;
+                    }
+
+                    // Mid confidence — put text in box, let user confirm
+                    const confNote = pct > 0 ? ` (${pct}% confidence)` : "";
                     sendVoice({
                         state: "result",
-                        text: result.text.trim(),
-                        message: "Check the command, then press Enter to run it.",
+                        text,
+                        message:
+                            `Heard: "${text}"${confNote}. ` +
+                            "Press Enter to run, or edit first.",
                     });
                 } catch {
                     sendVoice({
-                        state: "error",
-                        message: "Couldn't read the voice command. Try again.",
+                        state: "retry_available",
+                        message: "Couldn't read the voice result. Try again.",
                     });
                 }
             });
