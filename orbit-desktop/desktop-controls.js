@@ -9,17 +9,31 @@ const {
 
 const { spawn } = require("node:child_process");
 const path = require("node:path");
+const fs = require("node:fs");
 
 module.exports = function registerDesktopControls({
     getWindow,
     showQuickLauncher,
     restoreFullWindow,
+    getAppConfig: customGetAppConfig,
 }) {
     let tray = null;
     let quitting = false;
     let voiceProcess = null;
     let voiceStarting = false;
     let microphoneApproved = false;
+
+    function getAppName() {
+        try {
+            if (typeof customGetAppConfig === "function") {
+                return customGetAppConfig().appName || "PLCWBot";
+            }
+            delete require.cache[require.resolve("./app-config.json")];
+            return require("./app-config.json").appName || "PLCWBot";
+        } catch {
+            return "PLCWBot";
+        }
+    }
 
     function sendVoice(data) {
         const win = getWindow();
@@ -30,6 +44,11 @@ module.exports = function registerDesktopControls({
     }
 
     function createTrayIcon() {
+        const logoPath = path.join(__dirname, "logo.png");
+        if (fs.existsSync(logoPath)) {
+            return nativeImage.createFromPath(logoPath).resize({ width: 16, height: 16 });
+        }
+
         const size = 32;
         const pixels = Buffer.alloc(size * size * 4);
 
@@ -62,11 +81,12 @@ module.exports = function registerDesktopControls({
         const startupEnabled =
             app.isPackaged &&
             app.getLoginItemSettings().openAtLogin;
+        const appName = getAppName();
 
         tray.setContextMenu(
             Menu.buildFromTemplate([
                 {
-                    label: "Open Orbit",
+                    label: `Open ${appName}`,
                     click: showWindow,
                 },
                 {
@@ -95,7 +115,7 @@ module.exports = function registerDesktopControls({
                 },
                 { type: "separator" },
                 {
-                    label: "Quit Orbit",
+                    label: `Quit ${appName}`,
                     click: () => app.quit(),
                 },
             ])
@@ -110,15 +130,17 @@ module.exports = function registerDesktopControls({
         try {
             showQuickLauncher();
 
+            const appName = getAppName();
+
             if (!microphoneApproved) {
                 const { response } = await dialog.showMessageBox(
                     getWindow(),
                     {
                         type: "question",
                         title: "Use your microphone?",
-                        message: "Allow Orbit to listen for a voice command?",
+                        message: `Allow ${appName} to listen for a voice command?`,
                         detail:
-                            "Orbit listens only when you activate voice input. " +
+                            `${appName} listens only when you activate voice input. ` +
                             "Speech is processed by the installed Windows recognizer. " +
                             "The recognized text will appear for review before you run it.",
                         buttons: ["Cancel", "Allow"],
@@ -294,8 +316,9 @@ module.exports = function registerDesktopControls({
             }
         });
 
+        const appName = getAppName();
         tray = new Tray(createTrayIcon());
-        tray.setToolTip("Orbit");
+        tray.setToolTip(appName);
         tray.on("double-click", showWindow);
 
         updateTrayMenu();
@@ -327,7 +350,7 @@ module.exports = function registerDesktopControls({
                 message: `Couldn't register: ${unavailable.join(", ")}`,
                 detail:
                     "Another app or Windows may already use these shortcuts. " +
-                    "You can still use Orbit's tray menu.",
+                    `You can still use ${appName}'s tray menu.`,
             });
         }
 

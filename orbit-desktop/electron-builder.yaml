@@ -1,5 +1,5 @@
-appId: com.srihaas.orbit
-productName: Orbit
+appId: com.srihaas.plcwbot
+productName: PLCWBot
 
 directories:
   output: release
@@ -16,6 +16,8 @@ fileOptions:
     - index.html
     - style.css
     - package.json
+    - app-config.json
+    - logo.png
 
   extraResources:
     - from: setup-ai.ps1
@@ -29,6 +31,7 @@ win:
     - target: nsis
       arch:
         - x64
+  icon: logo.png
 
 nsis:
   oneClick: false
@@ -36,5 +39,5 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Orbit
+  shortcutName: PLCWBot
   runAfterFinish: true

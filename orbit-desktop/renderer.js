@@ -1,3 +1,28 @@
+function applyBranding(name) {
+    if (!name) return;
+    document.title = name;
+    document.querySelectorAll(".brand-text").forEach((el) => {
+        el.textContent = name;
+    });
+    document.querySelectorAll(".brand-text-upper").forEach((el) => {
+        el.textContent = name.toUpperCase();
+    });
+    document.querySelectorAll(".brand-logo, .quick-brand-logo").forEach((el) => {
+        el.alt = `${name} Logo`;
+    });
+}
+
+const currentAppName = window.orbit?.appName || "PLCWBot";
+applyBranding(currentAppName);
+
+if (window.orbit?.getAppConfig) {
+    window.orbit.getAppConfig().then((cfg) => {
+        if (cfg?.appName) {
+            applyBranding(cfg.appName);
+        }
+    }).catch(() => {});
+}
+
 const form = document.querySelector("#command-form");
 const input = document.querySelector("#command");
 const status = document.querySelector("#status");
@@ -162,8 +187,9 @@ document.addEventListener("keydown", (event) => {
 window.orbit.onVoiceUpdate((data) => {
     if (data.state === "result") {
         if (busy) {
+            const name = window.orbit?.appName || "PLCWBot";
             status.textContent =
-                "Orbit is busy. Finish the current command, then try voice again.";
+                `${name} is busy. Finish the current command, then try voice again.`;
             return;
         }
 

@@ -5,7 +5,7 @@
   "scripts": {
     "dist": "electron-builder --win nsis --x64"
   },
-  "productName": "Orbit",
+  "productName": "PLCWBot",
   "allowScripts": {
     "electron-winstaller@5.4.0": true
   }

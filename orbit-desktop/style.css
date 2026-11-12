@@ -124,7 +124,26 @@ button:disabled:hover {
     border-bottom: 1px solid var(--blue);
 }
 
+.brand-logo {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.quick-brand-logo {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    border-radius: 5px;
+    flex-shrink: 0;
+}
+
 .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
     color: var(--blue);
     font-size: 36px;
     line-height: 1;
@@ -132,7 +151,12 @@ button:disabled:hover {
     text-decoration: none;
 }
 
-.wordmark span {
+.wordmark .brand-text {
+    color: inherit;
+}
+
+.wordmark span,
+.wordmark .brand-dot {
     color: var(--gold);
 }
 
@@ -395,6 +419,11 @@ body:has(#version-two:checked) .masthead {
 body:has(#version-two:checked) .wordmark {
     color: var(--gold);
     font-size: 48px;
+}
+
+body:has(#version-two:checked) .wordmark .brand-logo {
+    width: 44px;
+    height: 44px;
 }
 
 body:has(#version-two:checked) .masthead-description {
@@ -818,6 +847,9 @@ body.quick-mode .quick-header {
 }
 
 .quick-wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     color: var(--gold);
     font-size: 25px;
     letter-spacing: -1px;

@@ -1,6 +1,16 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
+let appConfig = { appName: "PLCWBot" };
+try {
+    appConfig = ipcRenderer.sendSync("get-app-config-sync") || appConfig;
+} catch (e) {
+    console.warn("Could not sync app config:", e);
+}
+
 contextBridge.exposeInMainWorld("orbit", {
+    appName: appConfig.appName || "PLCWBot",
+    appConfig,
+    getAppConfig: () => ipcRenderer.invoke("get-app-config"),
 
     onVoiceUpdate: (callback) => {
         const listener = (_event, data) => callback(data);

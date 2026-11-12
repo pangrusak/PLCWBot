@@ -4,8 +4,31 @@ const {
     ipcMain,
     dialog,
     globalShortcut,
-} = require("electron"); const { spawn } = require("node:child_process");
+} = require("electron");
+const { spawn } = require("node:child_process");
 const path = require("node:path");
+const fs = require("node:fs");
+
+function getAppConfig() {
+    try {
+        delete require.cache[require.resolve("./app-config.json")];
+        return require("./app-config.json");
+    } catch {
+        return { appName: "PLCWBot" };
+    }
+}
+
+const initialConfig = getAppConfig();
+const initialAppName = initialConfig.appName || "PLCWBot";
+app.name = initialAppName;
+
+ipcMain.on("get-app-config-sync", (event) => {
+    event.returnValue = getAppConfig();
+});
+
+ipcMain.handle("get-app-config", async () => {
+    return getAppConfig();
+});
 
 let setupRunning = false;
 let window;
@@ -101,6 +124,10 @@ app.on("will-quit", () => {
 });
 
 function createWindow() {
+    const config = getAppConfig();
+    const currentName = config.appName || "PLCWBot";
+    const iconPath = path.join(__dirname, "logo.png");
+
     window = new BrowserWindow({
         width: 900,
         height: 620,
@@ -108,7 +135,8 @@ function createWindow() {
         minHeight: 420,
         backgroundColor: "#101018",
         autoHideMenuBar: true,
-        title: "Orbit",
+        title: currentName,
+        icon: fs.existsSync(iconPath) ? iconPath : undefined,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
             contextIsolation: true,
@@ -152,6 +180,7 @@ ipcMain.handle("setup-ai", async (event) => {
     };
 
     try {
+        const currentName = getAppConfig().appName || "PLCWBot";
         const { response } = await dialog.showMessageBox(window, {
             type: "question",
             title: "Set up local AI",
@@ -160,7 +189,7 @@ ipcMain.handle("setup-ai", async (event) => {
                 "This downloads software from Ollama and a model of about 1 GB. " +
                 "Additional disk space is required for Ollama. " +
                 "Ollama can remain running in the background. " +
-                "Keep Orbit open until setup finishes.",
+                `Keep ${currentName} open until setup finishes.`,
             buttons: ["Cancel", "Install local AI"],
             defaultId: 0,
             cancelId: 0,
@@ -264,11 +293,12 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-    // Orbit remains running until explicitly quit.
+    // App remains running in tray until explicitly quit.
 });
 
 require("./desktop-controls")({
     getWindow: () => window,
     showQuickLauncher,
     restoreFullWindow,
+    getAppConfig,
 });
