@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -14,12 +14,73 @@ $RECOGNIZE_WINDOW_S  = 18     # hard outer timeout passed to Recognize()
 $MAX_RETRIES         = 1      # number of automatic retries on null/low result
 
 # ---------------------------------------------------------------------------
+# Known app names – pre-loading these gives the recognizer much higher
+# accuracy for common apps (like "Minecraft") instead of treating speech
+# as a free-form sentence.
+# ---------------------------------------------------------------------------
+$KNOWN_APPS = @(
+    # Games
+    "minecraft", "minecraft launcher",
+    "steam", "epic games", "epic games launcher",
+    "roblox", "fortnite", "valorant", "league of legends",
+    "genshin impact", "apex legends", "overwatch",
+    # Browsers
+    "chrome", "google chrome", "firefox", "edge", "microsoft edge",
+    "brave", "opera",
+    # Microsoft Office & productivity
+    "word", "microsoft word",
+    "excel", "microsoft excel",
+    "powerpoint", "microsoft powerpoint",
+    "outlook", "microsoft outlook",
+    "onenote", "microsoft onenote",
+    "teams", "microsoft teams",
+    "access", "publisher",
+    # Windows built-ins
+    "notepad", "wordpad", "paint",
+    "calculator", "calendar", "clock",
+    "settings", "windows settings",
+    "task manager",
+    "file explorer", "explorer",
+    "control panel",
+    "command prompt", "powershell", "terminal", "windows terminal",
+    "snipping tool", "screen clipping",
+    "photos", "camera", "voice recorder",
+    "maps", "weather", "news",
+    "xbox", "xbox console companion",
+    "store", "microsoft store",
+    # Communication & social
+    "discord", "slack", "skype", "zoom", "whatsapp", "telegram",
+    # Media
+    "spotify", "vlc", "media player", "windows media player",
+    "netflix", "youtube",
+    # Dev tools
+    "visual studio", "visual studio code", "vs code",
+    "android studio", "intellij", "pycharm", "webstorm",
+    "github desktop", "git", "postman",
+    "notepad plus plus",
+    # Utilities
+    "7zip", "winrar", "winzip",
+    "obs", "obs studio",
+    "anydesk", "teamviewer",
+    "task scheduler",
+    "device manager",
+    "disk management",
+    "event viewer"
+)
+
+# Command verbs the user is expected to say
+$COMMAND_VERBS = @(
+    "open", "launch", "start", "run", "load",
+    "close", "quit", "exit", "kill",
+    "switch to", "go to",
+    "search for", "find", "search"
+)
+
+# ---------------------------------------------------------------------------
 # Helper: strip trailing punctuation that dictation engines append
 # ---------------------------------------------------------------------------
 function CleanText([string]$raw) {
-    # Remove trailing period, comma, question mark that SAPI appends
     $t = $raw.TrimEnd('.', ',', '?', '!').Trim()
-    # Collapse internal whitespace
     $t = ($t -replace '\s+', ' ')
     return $t
 }
@@ -37,7 +98,12 @@ function EmitResult([string]$text, [double]$confidence) {
 }
 
 # ---------------------------------------------------------------------------
-# Strategy 1 — SAPI (System.Speech)
+# Strategy 1 — SAPI with structured command grammar
+#
+# Using DictationGrammar for short imperative commands is a known bad idea:
+# the language model picks phonetically similar *sentence* words instead of
+# proper nouns like "Minecraft". A GrammarBuilder with Choices constrains
+# the recognizer to the actual command shape, dramatically improving accuracy.
 # ---------------------------------------------------------------------------
 function TrySapi {
     Add-Type -AssemblyName System.Speech
@@ -46,9 +112,7 @@ function TrySapi {
     $available = @([System.Speech.Recognition.SpeechRecognitionEngine]::InstalledRecognizers())
 
     $selected = $null
-
     if ($available.Count -gt 0) {
-        # Prefer exact en-US, then any English
         $selected = $available | Where-Object { $_.Culture.Name -eq 'en-US' } | Select-Object -First 1
         if (-not $selected) {
             $selected = $available | Where-Object { $_.Culture.TwoLetterISOLanguageName -eq 'en' } | Select-Object -First 1
@@ -58,16 +122,38 @@ function TrySapi {
         }
     }
 
-    # --- Build recognizer --------------------------------------------------
     $engine = if ($selected) {
         [System.Speech.Recognition.SpeechRecognitionEngine]::new($selected)
     } else {
-        # Default constructor may still work if SAPI has a default token configured
         [System.Speech.Recognition.SpeechRecognitionEngine]::new()
     }
 
     try {
-        $engine.LoadGrammar([System.Speech.Recognition.DictationGrammar]::new())
+        # --- Grammar 1: verb + KNOWN app name (highest accuracy) -----------
+        # When the user says "open minecraft" this grammar matches perfectly
+        # because the recognizer knows exactly what words are valid after the verb.
+        $verbChoices    = [System.Speech.Recognition.Choices]::new($COMMAND_VERBS)
+        $appChoices     = [System.Speech.Recognition.Choices]::new($KNOWN_APPS)
+        $builder1       = [System.Speech.Recognition.GrammarBuilder]::new()
+        $builder1.Append($verbChoices)
+        $builder1.Append($appChoices)
+        $grammar1       = [System.Speech.Recognition.Grammar]::new($builder1)
+        $grammar1.Name  = "KnownApps"
+        $grammar1.Priority = 127   # highest possible
+
+        # --- Grammar 2: verb + unconstrained dictation (unknown app names) -
+        # AppendDictation() tells the engine "expect a verb then anything"
+        # which is far better than pure DictationGrammar for commands.
+        $builder2       = [System.Speech.Recognition.GrammarBuilder]::new()
+        $builder2.Append($verbChoices)
+        $builder2.AppendDictation()
+        $grammar2       = [System.Speech.Recognition.Grammar]::new($builder2)
+        $grammar2.Name  = "VerbPlusDictation"
+        $grammar2.Priority = 64
+
+        $engine.LoadGrammar($grammar1)
+        $engine.LoadGrammar($grammar2)
+
         $engine.SetInputToDefaultAudioDevice()
 
         $engine.InitialSilenceTimeout       = [TimeSpan]::FromSeconds($INITIAL_SILENCE_SEC)
@@ -75,7 +161,6 @@ function TrySapi {
         $engine.EndSilenceTimeout           = [TimeSpan]::FromMilliseconds($END_SILENCE_MS)
         $engine.EndSilenceTimeoutAmbiguous  = [TimeSpan]::FromMilliseconds($END_SILENCE_AMB_MS)
 
-        # Signal JS that we are ready
         Write-Output "ORBIT_LISTENING"
 
         for ($attempt = 0; $attempt -le $MAX_RETRIES; $attempt++) {
@@ -87,11 +172,8 @@ function TrySapi {
             }
 
             if ($result.Confidence -lt $CONFIDENCE_MIN) {
-                if ($attempt -lt $MAX_RETRIES) {
-                    # Retry silently — keep the microphone open
-                    continue
-                }
-                # Return the low-confidence result with a flag so JS can warn
+                if ($attempt -lt $MAX_RETRIES) { continue }
+
                 @{
                     text           = (CleanText $result.Text)
                     confidence     = [Math]::Round($result.Confidence, 4)
@@ -110,7 +192,10 @@ function TrySapi {
 }
 
 # ---------------------------------------------------------------------------
-# Strategy 2 — WinRT via compiled C# helper
+# Strategy 2 — WinRT via compiled C# helper (WebSearch scenario)
+#
+# SpeechRecognitionScenario.WebSearch is tuned for short query-like phrases
+# (exactly the shape of "open minecraft"), far better than Dictation here.
 # ---------------------------------------------------------------------------
 function TryWinRT {
     $csc = Join-Path $env:windir 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
@@ -122,7 +207,6 @@ function TryWinRT {
     $winMetaDir = Join-Path $env:windir 'System32\WinMetadata'
     $fwDir      = Join-Path $env:windir 'Microsoft.NET\Framework64\v4.0.30319'
 
-    # Pick required winmd references
     $refs = @(
         (Join-Path $winMetaDir 'Windows.Foundation.winmd'),
         (Join-Path $winMetaDir 'Windows.Media.winmd'),
@@ -136,7 +220,6 @@ function TryWinRT {
     $exe = Join-Path $env:TEMP "plcw_voice_$PID.exe"
 
     try {
-        # Write helper source -------------------------------------------------
         @'
 using System;
 using System.Threading.Tasks;
@@ -144,34 +227,30 @@ using Windows.Media.SpeechRecognition;
 
 class Program {
     static void Main() {
-        try {
-            RunAsync().GetAwaiter().GetResult();
-        } catch (Exception ex) {
-            Console.Error.WriteLine(ex.Message);
-            Environment.Exit(1);
-        }
+        try { RunAsync().GetAwaiter().GetResult(); }
+        catch (Exception ex) { Console.Error.WriteLine(ex.Message); Environment.Exit(1); }
     }
 
     static async Task RunAsync() {
         var rec = new SpeechRecognizer();
 
+        // WebSearch scenario is tuned for short query-like utterances
+        // (e.g. "open minecraft") — much more accurate than Dictation for commands.
         var constraint = new SpeechRecognitionTopicConstraint(
-            SpeechRecognitionScenario.Dictation, "dictation");
+            SpeechRecognitionScenario.WebSearch, "websearch");
         rec.Constraints.Add(constraint);
 
         var compileResult = await rec.CompileConstraintsAsync();
-        if (compileResult.Status != SpeechRecognitionResultStatus.Success) {
+        if (compileResult.Status != SpeechRecognitionResultStatus.Success)
             throw new Exception("WinRT compile constraints failed: " + compileResult.Status);
-        }
 
         Console.WriteLine("ORBIT_LISTENING");
         Console.Out.Flush();
 
         var result = await rec.RecognizeAsync();
 
-        if (result == null || string.IsNullOrWhiteSpace(result.Text)) {
+        if (result == null || string.IsNullOrWhiteSpace(result.Text))
             throw new Exception("No speech detected. Please try again.");
-        }
 
         double conf = result.RawConfidence;
         string text = result.Text.TrimEnd('.', ',', '?', '!').Trim();
@@ -183,15 +262,13 @@ class Program {
 }
 '@ | Set-Content -Path $src -Encoding UTF8
 
-        # Compile -------------------------------------------------------------
-        $refArgs = ($refs | ForEach-Object { "/r:`"$_`"" }) -join ' '
+        $refArgs    = ($refs | ForEach-Object { "/r:`"$_`"" }) -join ' '
         $compileCmd = "& `"$csc`" /nologo /target:exe /out:`"$exe`" $refArgs `"$src`""
         $compileOut = Invoke-Expression $compileCmd 2>&1
         if (-not (Test-Path $exe)) {
             throw "WinRT helper compile failed: $compileOut"
         }
 
-        # Run helper ----------------------------------------------------------
         & $exe
         $exitCode = $LASTEXITCODE
         exit $exitCode
@@ -213,7 +290,6 @@ try {
     $sapiError = $_.Exception.Message
 }
 
-# SAPI failed — emit stderr note and try WinRT
 [Console]::Error.WriteLine("SAPI unavailable ($sapiError); trying WinRT fallback…")
 
 try {
@@ -222,7 +298,6 @@ try {
     $winrtError = $_.Exception.Message
 }
 
-# Both failed
 [Console]::Error.WriteLine("Voice recognition failed.")
 [Console]::Error.WriteLine("SAPI:  $sapiError")
 [Console]::Error.WriteLine("WinRT: $winrtError")

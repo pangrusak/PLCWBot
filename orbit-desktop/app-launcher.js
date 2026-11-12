@@ -176,11 +176,36 @@ module.exports = function registerAppLauncher(getWindow) {
     }
 
     function findMatches(apps, requestedName) {
+        // Alias map: ALL keys must be pre-normalized (lowercase, letters+digits only —
+        // no spaces, hyphens, etc.) because normalize() strips those before lookup.
+        // Add entries here whenever voice recognition returns a close-but-not-exact word.
         const aliases = {
-            mc: "minecraft",
-            vscode: "visualstudiocode",
-            chrome: "googlechrome",
-            word: "word",
+            // Minecraft — normalized voice mishears
+            mc:                "minecraft",
+            minecraf:          "minecraft",   // truncation
+            mindcraft:         "minecraft",   // mishear
+            minecraftlaunch:   "minecraft",
+            minecraftlauncher: "minecraft",
+            // Browsers
+            chrome:            "googlechrome",
+            googlechrom:       "googlechrome",
+            // Dev tools
+            vscode:            "visualstudiocode",
+            vs:                "visualstudiocode",
+            // Office
+            word:              "word",
+            excel:             "excel",
+            powerpoint:        "powerpoint",
+            ppt:               "powerpoint",
+            // Other common
+            spotify:           "spotify",
+            discord:           "discord",
+            steam:             "steam",
+            notepad:           "notepad",
+            calc:              "calculator",
+            calculator:        "calculator",
+            explorer:          "fileexplorer",
+            fileexplorer:      "fileexplorer",
         };
 
         let query = normalize(requestedName);
