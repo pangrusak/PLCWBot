@@ -1,9 +1,9 @@
 {
   "devDependencies": {
-    "electron-builder": "^26.18.0"
+    "electron-builder": "^25.1.0"
   },
   "scripts": {
-    "dist": "electron-builder --win nsis --x64"
+    "dist": "electron-builder --win nsis --x64 --publish never"
   },
   "productName": "PLCWBot",
   "allowScripts": {
